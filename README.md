@@ -37,3 +37,12 @@
 ## Documentacao
 ### O que e o projeto?
 Um carrinho do batman de controle remoto que liga com um batsinal (lanter) 
+
+### Sensores e atuadores
+- 2 motores, encoder, ponte h, leds e buzzer (opcional)
+- ESP32
+
+### Mecanica
+- Base e carenagem impressas
+- Parafusos
+- protoboard pequena
