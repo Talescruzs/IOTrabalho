@@ -1,0 +1,7 @@
+Bibliotecas necessárias:
+
+Ultrassonic -> https://github.com/ErickSimoes/Ultrasonic;
+DS18B20 (sensor de temperatura) -> https://github.com/matmunk/DS18B20;
+MPU6050 (giroscópio/acelerômetro) -> https://github.com/ElectronicCats/mpu6050;
+APDS9960 (sensor de gestos e cor) -> https://github.com/adafruit/Adafruit_APDS9960;
+Sensor de Velocidade encoder -> não há bibliotecas padrão;
