@@ -36,7 +36,7 @@
 
 ## Documentacao
 ### O que e o projeto?
-Um carrinho do batman de controle remoto que liga com um batsinal (lanter) 
+Um carrinho do batman de controle remoto que liga com um batsinal (lanterna) 
 
 ### Sensores e atuadores
 - 2 motores, encoder, ponte h, leds e buzzer (opcional)
