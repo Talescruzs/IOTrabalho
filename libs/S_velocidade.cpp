@@ -1,22 +1,20 @@
 #include "S_velocidade.h"
 
-Encoder::Encoder(int encoder)
-{
-    pino = encoder;
-    pinMode(encoder, INPUT);  
-}
+unsigned long tempo_final=0;
+unsigned int RPM = 0;
+int qtd_buracos = 1;
 
-Encoder::medirRPM() {
-    tempo_inicial = micros();
+void medirRPM() {
+    unsigned long tempo_inicial = micros();
     unsigned long t = tempo_inicial - tempo_final;
     if (t >= 1000000) {
         RPM = 60 / ((1000000) * t * qtd_buracos);
         tempo_final = tempo_inicial;
     }
 }
-
-Encoder::getRPM(){
-    return RPM;
-}
-
-//attachInterrupt(digitalPinToInterrupt(encoder), medirRPM, RISING);
+/*
+    * Precisa usar no setup() a seguinte função:
+    * attachInterrupt(digitalPinToInterrupt(encoder), medirRPM, RISING);
+    * E esse código todo é pura gambiarra...
+    * Boa sorte!
+*/

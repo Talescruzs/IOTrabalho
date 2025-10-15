@@ -1,18 +1,11 @@
 #ifndef SENSOR_V_H
 #define SENSOR_V_H
+#include <Arduino.h>
 
-class Encoder
-{
-private:
-    int pino;
-    int qtd_buracos;
-    unsigned long tempo_inicial;
-    unsigned long tempo_final;
-    uint8_t RPM;
-    unsigned int medirRPM();
-public:
-    Encoder(int encoder);
-    unsigned int getRPM();
-};
+extern unsigned long tempo_final;
+extern unsigned int RPM;
+extern int qtd_buracos;
+
+void medirRPM();
 
 #endif
