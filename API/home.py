@@ -5,7 +5,7 @@ def home():
     <html>
         <head><title>Bem-vindo</title></head>
         <body>
-            <h1>Bem-vindo à Home da Página!</h1>
+            <h1>Bem-vindo à Home da API!</h1>
         </body>
     </html>
     """

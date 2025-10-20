@@ -1,9 +1,9 @@
-CREATE TABLE sensores (
+CREATE TABLE IF NOT EXISTS sensores (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(50)
 );
 
-CREATE TABLE leituras (
+CREATE TABLE IF NOT EXISTS leituras (
     id SERIAL PRIMARY KEY,
     sensor_id INTEGER REFERENCES sensores(id),
     valor FLOAT,

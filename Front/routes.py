@@ -1,6 +1,6 @@
 from flask import Blueprint
 from API.controllers import get_data
-from API.home import home
+from Front.home import home
 
 api_bp = Blueprint('api', __name__)
 
