@@ -25,7 +25,7 @@
 - #### Aplicação / Visualização
 - [ ] Recebimento dos dados (passivo)
 - [ ] Tratamento dos dados 
-- [ ] Definir banco 
+- [x] Definir banco 
 - [ ] Armazenamento dos dados 
 - [ ] Criacao de dashboard 
 - [ ] API para disponibilizacao dos dados 
