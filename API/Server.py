@@ -25,12 +25,19 @@ def init_db():
     conn.close()
 
 from flask import Flask
+try:
+    from flask_cors import CORS
+except ImportError:
+    def CORS(app, *args, **kwargs):
+        print("Aviso: flask-cors não instalado; CORS desabilitado.", flush=True)
+        return app
 from routes import api_bp
 
 # Cria o banco caso não exista
 init_db()
 
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": ["http://127.0.0.1:5001", "http://localhost:5001"]}})
 app.register_blueprint(api_bp)
 
 if __name__ == "__main__":

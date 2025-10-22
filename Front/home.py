@@ -1,12 +1,5 @@
-from flask import Response
+from flask import render_template
 
 def home():
-    html = """
-    <html>
-        <head><title>Bem-vindo</title></head>
-        <body>
-            <h1>Bem-vindo à Home da Página!</h1>
-        </body>
-    </html>
-    """
-    return Response(html, mimetype='text/html')
+    control_url = "http://127.0.0.1:5000/control"
+    return render_template('home.html', control_url=control_url)
