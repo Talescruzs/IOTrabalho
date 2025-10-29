@@ -39,8 +39,22 @@
 Um carrinho do batman de controle remoto que liga com um batsinal (lanterna) 
 
 ### Sensores e atuadores
-- 2 motores, encoder, ponte h, leds e buzzer (opcional)
-- ESP32
+- 2 motores, ponte h, leds e buzzer (opcional)
+- 2 ESP32
+- teclado 16
+- encoder
+
+#### O que temos
+- 2 motores
+- ponte h
+- leds
+- buzzer
+- teclado 16
+
+#### Falta ou nao funciona
+- encoder
+
+
 
 ### Mecanica
 - Base e carenagem impressas
