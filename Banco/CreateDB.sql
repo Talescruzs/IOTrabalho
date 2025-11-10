@@ -6,6 +6,11 @@ CREATE TABLE IF NOT EXISTS sensores (
 CREATE TABLE IF NOT EXISTS leituras (
     id SERIAL PRIMARY KEY,
     sensor_id INTEGER REFERENCES sensores(id),
-    valor FLOAT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS valores (
+    id SERIAL PRIMARY KEY,
+    leitura_id INTEGER REFERENCES leituras(id),
+    valor FLOAT
 );

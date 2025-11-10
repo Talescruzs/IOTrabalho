@@ -1,6 +1,11 @@
+#include <WiFi.h> // garante WiFiClient conhecido antes de protótipos
 #include "JsonStore.h"
 
 JsonStore jsonStore;
+
+// Forward das funções da comunicação
+void comunicacaoInit();
+void comunicacaoProcess();
 
 void setup() {
   // put your setup code here, to run once:
@@ -11,6 +16,7 @@ void setup() {
   JSONVar v; v = 0;
   jsonStore.setNested("sensors", "rpm", v);
   v = 0; jsonStore.setNested("sensors", "temp", v);
+  comunicacaoInit(); // inicia WiFi/servidor
 }
 
 void loop() {
@@ -26,4 +32,5 @@ void loop() {
     Serial.println(jsonStore.toString());
     last = millis();
   }
+  comunicacaoProcess(); // trata conexões HTTP
 }
