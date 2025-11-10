@@ -69,3 +69,33 @@ Plataforma para tratamento de dados de sensores
 - Base e carenagem impressas
 - Parafusos
 - protoboard pequena
+
+
+
+## Onde ouvir a comunicação da ESP32
+A ESP32 sobe um servidor HTTP na porta 80 (definido em `comunicacao.ino`) e expõe o endpoint `/status`.
+
+Como descobrir o IP:
+1. Abra o Serial Monitor após o boot da ESP32.
+2. Procure pela linha: `Endereço de IP:` e anote o IP mostrado (ex.: `192.168.0.50`).
+
+Escutar direto na ESP32:
+- Navegador: `http://<IP_DA_ESP>/status`
+- curl:
+  ```
+  curl http://<IP_DA_ESP>/status
+  ```
+
+Escutar via API (proxy):
+- Endpoint: `GET http://127.0.0.1:5000/esp/status?host=<IP_DA_ESP>`
+- Exemplo:
+  ```
+  curl "http://127.0.0.1:5000/esp/status?host=192.168.0.50"
+  ```
+- Opcional: defina a variável de ambiente `ESP32_HOST` e chame sem `host`:
+  ```
+  export ESP32_HOST=192.168.0.50
+  curl http://127.0.0.1:5000/esp/status
+  ```
+
+O payload esperado é um JSON montado na ESP32 contendo `device`, `sensor`, `data` e `ts`.

@@ -1,4 +1,5 @@
 from flask import jsonify, request
+import os
 
 def get_data():
     # Exemplo de dados
@@ -19,3 +20,26 @@ def control_command():
         "ok": True,
         "received": {"action": action, "event": event}
     })
+
+def esp_status():
+    host_default = os.environ.get("ESP32_HOST", "192.168.0.50")  # ajuste conforme sua rede
+    host = request.args.get("host", host_default)
+    url = f"http://{host}/status"
+    data = {}
+    try:
+        try:
+            import requests
+            r = requests.get(url, timeout=2)
+            if r.status_code == 200:
+                data = r.json()
+            else:
+                return jsonify({"ok": False, "error": f"HTTP {r.status_code}", "host": host}), 502
+        except ImportError:
+            # fallback sem requests
+            import urllib.request, json
+            with urllib.request.urlopen(url, timeout=2) as resp:
+                raw = resp.read().decode()
+                data = json.loads(raw)
+        return jsonify({"ok": True, "host": host, "data": data})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e), "host": host}), 500
