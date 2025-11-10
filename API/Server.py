@@ -42,4 +42,4 @@ print("CORS habilitado para todos os origins.", flush=True)
 app.register_blueprint(api_bp)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=int(os.environ.get("API_PORT", "5000")), debug=True)
