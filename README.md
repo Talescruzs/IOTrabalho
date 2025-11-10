@@ -14,11 +14,21 @@
 
 ## TODO List
 - #### Dispositivos e sensores
-- [ ] Fazer todos funcionarem 
-- [ ] Definir sensores que vamos usar
+- [ ] Fazer todos funcionarem
+      - Sensor de Temperatura
+      - Acelerômetro e Giroscópio
+      - Sensor de Gestos e Cor
+      - Sensor de Velocidade e Enconder
+      - Distância Ultrassônico
+      - Modulo Relé
+      - Micro Motor de Vibração
+      - Joystick
+      - Teclado Matricial
+      - Controle Remoto Ir + Receptor Ir
+      - Umidade e Temperatura
 - #### Comunicação e Transmissão
 - [ ] Definir estrutura de pre processamento
-- [ ] Definir protocolo de comunicacao
+- [x] Definir protocolo de comunicacao
 - #### Ingestão, Armazenamento e Processamento de Dados (pre processamento)
 - [ ] Organizar as bibliotecas dos sensores
 - [ ] Organizar os dados em um buffer
@@ -26,7 +36,7 @@
 - [ ] Recebimento dos dados (passivo)
 - [ ] Tratamento dos dados 
 - [x] Definir banco 
-- [ ] Armazenamento dos dados 
+- [x] Armazenamento dos dados 
 - [ ] Criacao de dashboard 
 - [ ] API para disponibilizacao dos dados 
 - #### Deploy e Testes
@@ -36,20 +46,7 @@
 
 ## Documentacao
 ### O que e o projeto?
-Um carrinho do batman de controle remoto que liga com um batsinal (lanterna) 
-
-### Sensores e atuadores
-- 2 motores, ponte h, leds e buzzer (opcional)
-- 2 ESP32
-- teclado 16
-- encoder
-
-#### O que temos
-- 2 motores
-- ponte h
-- leds
-- buzzer
-- teclado 16
+Plataforma para tratamento de dados de sensores
 
 #### Falta ou nao funciona
 - encoder
