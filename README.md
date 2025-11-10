@@ -15,17 +15,29 @@
 ## TODO List
 - #### Dispositivos e sensores
 - [ ] Fazer todos funcionarem
+
       - Sensor de Temperatura
+      
       - Acelerômetro e Giroscópio
+
       - Sensor de Gestos e Cor
+
       - Sensor de Velocidade e Enconder
-      - Distância Ultrassônico
+
+       - Distância Ultrassônico
+
       - Modulo Relé
+
       - Micro Motor de Vibração
+
       - Joystick
+
       - Teclado Matricial
+
       - Controle Remoto Ir + Receptor Ir
+
       - Umidade e Temperatura
+      
 - #### Comunicação e Transmissão
 - [ ] Definir estrutura de pre processamento
 - [x] Definir protocolo de comunicacao
