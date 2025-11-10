@@ -6,6 +6,7 @@ JsonStore jsonStore;
 // Forward das funções da comunicação
 void comunicacaoInit();
 void comunicacaoProcess();
+void comunicacaoTick(); // nova função
 
 void setup() {
   // put your setup code here, to run once:
@@ -32,5 +33,5 @@ void loop() {
     Serial.println(jsonStore.toString());
     last = millis();
   }
-  comunicacaoProcess(); // trata conexões HTTP
+  comunicacaoTick(); // envia status automaticamente e trata conexões HTTP
 }
