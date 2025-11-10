@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# Banco de dados
+*.db
+*.sqlite
+*.sqlite3
+
+# Credenciais e configurações locais
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Arduino
+*.ino.bin
+*.ino.elf
+*.ino.map
