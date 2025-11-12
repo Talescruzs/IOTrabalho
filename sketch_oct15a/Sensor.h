@@ -3,7 +3,8 @@
 
 #include <ArduinJson.h>
 #include <Arduino.h>
-#include <Pino.h>
+#include "Pino.h"
+#include "JsonStore.h"
 
 class Sensor
 {
