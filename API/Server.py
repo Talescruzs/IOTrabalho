@@ -13,6 +13,13 @@ try:
 except ImportError:
     print("AVISO: python-dotenv não instalado. Use: pip install python-dotenv", flush=True)
 
+# Validar e printar configurações MQTT
+MQTT_BROKER = os.environ.get('MQTT_BROKER', 'localhost')
+MQTT_PORT = int(os.environ.get('MQTT_PORT', 1883))
+MQTT_TOPIC = os.environ.get('MQTT_TOPIC', 'iot/register')
+
+print(f"[config] MQTT_BROKER={MQTT_BROKER}, MQTT_PORT={MQTT_PORT}, MQTT_TOPIC={MQTT_TOPIC}", flush=True)
+
 # Inicializa o banco de dados MySQL e cria tabelas se não existirem
 def init_db():
     try:
@@ -23,10 +30,10 @@ def init_db():
         return
     
     mysql_config = {
-        'host': os.environ.get('MYSQL_HOST', 'localhost'),
-        'user': os.environ.get('MYSQL_USER', 'root'),
-        'password': os.environ.get('MYSQL_PASSWORD', ''),
-        'port': int(os.environ.get('MYSQL_PORT', '3306'))
+        'host': os.environ.get('DB_HOST', 'localhost'),
+        'user': os.environ.get('DB_USER', 'root'),
+        'password': os.environ.get('DB_PASSWORD', ''),
+        'port': int(os.environ.get('DB_PORT', '3306'))
     }
     
     print(f"Conectando ao MySQL: {mysql_config['user']}@{mysql_config['host']}:{mysql_config['port']}", flush=True)
@@ -62,6 +69,14 @@ except ImportError:
         return app
 from routes import api_bp
 
+# inicia mqtt listener (se disponível) - apenas no processo principal
+if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    try:
+        from API.mqtt_listener import start_background
+        start_background()
+    except Exception as e:
+        print(f"AVISO: não foi possível iniciar mqtt_listener: {e}", flush=True)
+
 # Cria o banco caso não exista
 init_db()
 
@@ -71,4 +86,5 @@ print("CORS habilitado para todos os origins.", flush=True)
 app.register_blueprint(api_bp)
 
 if __name__ == "__main__":
+
     app.run(host='0.0.0.0', port=int(os.environ.get("API_PORT", "5000")), debug=True)

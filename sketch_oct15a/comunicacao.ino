@@ -1,12 +1,37 @@
 #include <WiFi.h>
 #include <Arduino_JSON.h>
-#include <HTTPClient.h>
+#include <PubSubClient.h>
+
 char* ssid = "osBalakinhas";
 char* password = "balakubaku";
 int LED = 2;
 WiFiServer server(80);
-const char* API_URL = "http://192.168.143.117:5000/esp/ingest"; // ajuste para o IP/host da API
-const char* API_HOST = "192.168.143.117"; // separado para teste de ping
+
+// MQTT config
+const char* MQTT_BROKER = "192.168.143.117"; // altere para seu broker
+const uint16_t MQTT_PORT = 1883;
+const char* MQTT_TOPIC = "iot/register";  // tópico mudou para registro
+
+WiFiClient espClient;
+PubSubClient mqttClient(espClient);
+
+// Callback quando recebe mensagem MQTT
+void onMqttMessage(char* topic, byte* payload, unsigned int length) {
+  Serial.print("\n>>> Mensagem MQTT recebida [");
+  Serial.print(topic);
+  Serial.print("]: ");
+  
+  String message = "";
+  for (unsigned int i = 0; i < length; i++) {
+    message += (char)payload[i];
+  }
+  Serial.println(message);
+  
+  // Pisca LED quando recebe confirmação
+  digitalWrite(LED, HIGH);
+  delay(200);
+  digitalWrite(LED, LOW);
+}
 
 void comunicacaoInit() {
   Serial.begin(9600);
@@ -28,6 +53,44 @@ void comunicacaoInit() {
   Serial.println(WiFi.localIP());
 
   server.begin();
+
+  // MQTT init - registra IP uma vez
+  mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
+  mqttClient.setCallback(onMqttMessage);  // registra callback
+
+  unsigned long start = millis();
+  while (!mqttClient.connected() && millis() - start < 5000) {
+    Serial.println("Conectando ao broker MQTT para registro...");
+    if (mqttClient.connect("esp32-client")) {
+      Serial.println("Conectado ao MQTT broker.");
+
+      // Subscreve no tópico de confirmação E resposta
+      mqttClient.subscribe("iot/confirm/esp32");
+      mqttClient.subscribe("iot/response/esp32");
+      Serial.println("Subscrito em: iot/confirm/esp32 e iot/response/esp32");
+
+      // Envia mensagem de registro com IP
+      String registerMsg = "{\"device_id\":\"esp32\",\"ip\":\"" + WiFi.localIP().toString() + "\"}";
+      mqttClient.publish(MQTT_TOPIC, registerMsg.c_str());
+      Serial.println("IP registrado via MQTT: " + registerMsg);
+
+      // Aguarda confirmação por 3 segundos
+      unsigned long waitStart = millis();
+      while (millis() - waitStart < 3000) {
+        mqttClient.loop();
+        delay(10);
+      }
+
+      Serial.println("Mantendo conexão MQTT ativa para receber comandos...");
+      // NÃO desconecta - mantém conectado para receber respostas
+      break;
+    } else {
+      Serial.print("Falha MQTT, rc=");
+      Serial.print(mqttClient.state());
+      Serial.println(" tentando novamente...");
+      delay(1000);
+    }
+  }
 }
 
 String buildStatusJson(const String& sensor, const JSONVar& fields) {
@@ -35,7 +98,7 @@ String buildStatusJson(const String& sensor, const JSONVar& fields) {
   obj["device"] = "esp32";
   obj["sensor"] = sensor;
   obj["data"] = fields;
-  obj["ts"] = (double)millis(); 
+  obj["ts"] = (double)millis();
   return JSON.stringify(obj);
 }
 
@@ -47,7 +110,7 @@ String buildStatusJson(const String& sensor, const char* keys[], const double va
   return buildStatusJson(sensor, data);
 }
 
-// Função que envia a resposta HTTP com JSON
+// Função que envia a resposta HTTP com JSON (servidor local)
 void sendJson(WiFiClient& client, const String& json) {
   client.println("HTTP/1.1 200 OK");
   client.println("Content-Type: application/json");
@@ -103,58 +166,40 @@ void comunicacaoProcess() {
   Serial.println("Client Disconnected.");
 }
 
-void pushStatusPeriodic() {
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi desconectado, abortando push");
-    return;
-  }
-  static unsigned long lastPush = 0;
-  if (millis() - lastPush < 5000) return;
-
-  Serial.printf("Preparando POST para %s...\n", API_URL);
-
-  double rpm = (millis() / 100) % 4000;
-  double temp = 20.0 + ((millis() / 1000) % 15);
-  const char* keys[] = {"rpm", "temp"};
-  double vals[] = {rpm, temp};
-  String payload = buildStatusJson("motor", keys, vals, 2);
-  
-  Serial.print("Payload: ");
-  Serial.println(payload);
-
-  WiFiClient net;
-  HTTPClient http;
-  http.setTimeout(5000);
-  
-  Serial.println("Iniciando conexão HTTP...");
-  if (!http.begin(net, API_URL)) {
-    Serial.println("ERRO: HTTP begin falhou");
-    lastPush = millis();
-    return;
-  }
-  
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("Connection", "close");
-
-  Serial.println("Enviando POST...");
-  int code = http.POST(payload);
-  
-  if (code > 0) {
-    String resp = http.getString();
-    Serial.printf("✓ Push OK - status: %d, resp: %s\n", code, resp.c_str());
-  } else {
-    Serial.printf("✗ Push FALHOU - código: %d, erro: %s\n", code, http.errorToString(code).c_str());
-    Serial.println("Verificações:");
-    Serial.printf("  1. API rodando? curl http://192.168.143.117:5000/esp/latest\n");
-    Serial.printf("  2. Firewall liberado na porta 5000?\n");
-    Serial.printf("  3. Mesma rede WiFi? ESP: %s\n", WiFi.localIP().toString().c_str());
-  }
-  http.end();
-  lastPush = millis();
-}
-
 // Tick chamado no loop principal
 void comunicacaoTick() {
-  pushStatusPeriodic();
+  // Mantém MQTT ativo para receber respostas
+  if (mqttClient.connected()) {
+    mqttClient.loop();
+  } else {
+    // Tenta reconectar se perdeu conexão
+    static unsigned long lastReconnect = 0;
+    if (millis() - lastReconnect > 5000) {
+      Serial.println("MQTT desconectado, tentando reconectar...");
+      if (mqttClient.connect("esp32-client")) {
+        Serial.println("MQTT reconectado!");
+        mqttClient.subscribe("iot/confirm/esp32");
+        mqttClient.subscribe("iot/response/esp32");
+      }
+      lastReconnect = millis();
+    }
+  }
+  
+  // Envia dados de sensor periodicamente
+  static unsigned long lastSensorSend = 0;
+  if (millis() - lastSensorSend > 10000) {  // a cada 10 segundos
+    if (mqttClient.connected()) {
+      double rpm = (millis() / 100) % 4000;
+      double temp = 20.0 + ((millis() / 1000) % 15);
+      
+      String sensorMsg = "{\"device_id\":\"esp32\",\"sensor\":\"motor\",\"data\":{\"rpm\":" + 
+                        String(rpm) + ",\"temp\":" + String(temp) + "}}";
+      
+      mqttClient.publish("iot/sensor/esp32", sensorMsg.c_str());
+      Serial.println("Dados de sensor enviados: " + sensorMsg);
+    }
+    lastSensorSend = millis();
+  }
+  
   comunicacaoProcess();
 }

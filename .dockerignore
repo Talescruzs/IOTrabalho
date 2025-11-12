@@ -1,0 +1,10 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.db
+.env
+.vscode
+.idea
+node_modules
+*.ino.bin

@@ -1,0 +1,6 @@
+flask
+flask-cors
+python-dotenv
+mysql-connector-python
+paho-mqtt
+requests
