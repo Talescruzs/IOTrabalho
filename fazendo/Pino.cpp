@@ -22,7 +22,7 @@ int Pino::read(){
 
 bool Pino::write(int data){
     if (mode != OUTPUT) return false;
-    if (type == ANALOGICO || PMW) {
+    if (type == ANALOGICO || PWM) {
         analogWrite(pin, data);
         return true;
     }

@@ -14,25 +14,21 @@ Sensor::~Sensor() {
 }
 
 String Sensor::toJSON() {
-    StaticJsonDocument<200> doc;
-    
-    JsonArray pinsArray = doc.createNestedArray("pins");
-    for(size_t i = 0; i < numPins; i++) {
-        JsonObject pinObj = pinsArray.createNestedObject();
-        pinObj["value"] = pins[i].read();
+    JsonStore store;
+
+    for (int i = 0; i < numPins; i++) {
+        String key = "pin" + String(pins[i].getPin());
+        store.setNumber(key, pins[i].read()); // Armazene o valor do pino
     }
-    
-    String output;
-    serializeJson(doc, output);
-    return output;
+
+    return store.toString();
 }
 
 JsonDocument Sensor::readValues() {
-    StaticJsonDocument<200> doc;
-    
-    for(size_t i = 0; i < numPins; i++) {
-        doc[String("pin") + String(pins[i].getPin())] = pins[i].read();
+    JsonStore store;
+    for (int i = 0; i < numPins; i++) {
+        String key = "pin" + String(pins[i].getPin());
+        store.setNumber(key, pins[i].read());
     }
-    
-    return doc;
+    return store;
 }
