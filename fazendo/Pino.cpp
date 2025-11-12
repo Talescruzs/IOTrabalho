@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <Pino.h>
 
 Pino::Pino(int pin, int mode, int type, bool pwm)
 {
@@ -21,7 +22,7 @@ int Pino::read(){
 
 bool Pino::write(int data){
     if (mode != OUTPUT) return false;
-    if (type == ANALOGICO) {
+    if (type == ANALOGICO || PWM) {
         analogWrite(pin, data);
         return true;
     }
