@@ -51,7 +51,14 @@ def init_db():
         for statement in sql_script.split(';'):
             statement = statement.strip()
             if statement:
-                cur.execute(statement)
+                try:
+                    cur.execute(statement)
+                except mysql.connector.Error as err:
+                    # Ignora erro de índice duplicado (código 1061)
+                    if err.errno == 1061:
+                        print(f"ℹ️  Índice já existe (ignorando): {err.msg}", flush=True)
+                    else:
+                        raise
         
         conn.commit()
         cur.close()
@@ -80,7 +87,7 @@ if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
 # Cria o banco caso não exista
 init_db()
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='../Front/templates', static_folder='../Front/static')
 CORS(app, supports_credentials=True)
 print("CORS habilitado para todos os origins.", flush=True)
 app.register_blueprint(api_bp)

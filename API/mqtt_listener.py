@@ -7,6 +7,14 @@ try:
 except ImportError:
     mqtt = None
 
+# Importa funções do db_helper
+try:
+    from API.db_helper import register_or_update_esp, insert_sensor_data, get_esp_id_by_name
+    DB_AVAILABLE = True
+except ImportError:
+    print("[mqtt] AVISO: db_helper não disponível, dados não serão salvos no BD", flush=True)
+    DB_AVAILABLE = False
+
 # Dicionário para armazenar IPs registrados
 registered_devices = {}
 
@@ -44,14 +52,30 @@ def on_message(cl, userdata, msg):
             device_id = data.get('device_id', 'unknown')
             ip = data.get('ip', 'N/A')
             
-            # Armazena IP do dispositivo
+            # Armazena IP do dispositivo em memória
             registered_devices[device_id] = ip
-            print(f"✓ Dispositivo registrado: {device_id} com IP: {ip}", flush=True)
+            print(f"✓ Dispositivo registrado em memória: {device_id} com IP: {ip}", flush=True)
+            
+            # Registra/atualiza no banco de dados
+            if DB_AVAILABLE:
+                esp_id = register_or_update_esp(device_id, ip)
+                if esp_id:
+                    print(f"✓ Dispositivo salvo no banco com ID: {esp_id}", flush=True)
+                else:
+                    print(f"✗ Falha ao salvar dispositivo no banco", flush=True)
+            else:
+                print("[mqtt] Banco de dados não disponível, registro apenas em memória", flush=True)
+            
             print(f"[mqtt] Dispositivos registrados: {registered_devices}", flush=True)
             
             # Enviar confirmação para tópico específico do device
             confirm_topic = f"iot/confirm/{device_id}"
-            confirm_msg = "estou sentindo as minhas forcas indo embora"
+            confirm_msg = json.dumps({
+                "status": "registered",
+                "device_id": device_id,
+                "ip": ip,
+                "timestamp": datetime.now().isoformat()
+            })
             cl.publish(confirm_topic, confirm_msg)
             print(f"[mqtt] ✓ Confirmação enviada para tópico: {confirm_topic}", flush=True)
             
@@ -65,6 +89,22 @@ def on_message(cl, userdata, msg):
             
             if isinstance(fields, dict):
                 print(f"[mqtt] Dados de {device_id}/{sensor}: {fields}", flush=True)
+                
+                # Salva os dados no banco se disponível
+                if DB_AVAILABLE:
+                    # Busca o ID da ESP no banco
+                    esp_id = get_esp_id_by_name(device_id)
+                    
+                    if esp_id:
+                        # Insere os dados do sensor
+                        leitura_id = insert_sensor_data(sensor, fields, esp_id)
+                        if leitura_id:
+                            print(f"[mqtt] ✓ Dados salvos no banco (leitura_id={leitura_id})", flush=True)
+                        else:
+                            print(f"[mqtt] ✗ Falha ao salvar dados no banco", flush=True)
+                    else:
+                        print(f"[mqtt] ⚠ ESP '{device_id}' não encontrada no banco, dados não salvos", flush=True)
+                        print(f"[mqtt] Dica: Dispositivo precisa se registrar primeiro via tópico {MQTT_TOPIC}", flush=True)
                 
                 # Enviar resposta para o dispositivo específico
                 response_topic = f"iot/response/{device_id}"
