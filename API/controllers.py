@@ -72,7 +72,41 @@ def ingest_status():
         "data": payload
     }
     
-    print(f"[ingest] ✓ Payload armazenado: {json.dumps(payload, indent=2)}", flush=True)
+    print(f"[ingest] ✓ Payload armazenado em memória: {json.dumps(payload, indent=2)}", flush=True)
+    
+    # Salva no banco de dados (igual ao MQTT listener)
+    try:
+        from API.db_helper import get_esp_id_by_name, insert_sensor_data, register_or_update_esp
+        
+        device_id = payload.get('device_id')
+        sensor = payload.get('sensor', 'unknown')
+        data = payload.get('data', {})
+        
+        if device_id and isinstance(data, dict):
+            esp_id = get_esp_id_by_name(device_id)
+            
+            # Se ESP não existe, registra automaticamente
+            if not esp_id:
+                print(f"[ingest] ESP '{device_id}' não encontrada, registrando automaticamente...", flush=True)
+                esp_id = register_or_update_esp(device_id, request.remote_addr)
+                if esp_id:
+                    print(f"[ingest] ✓ ESP registrada automaticamente com ID: {esp_id}", flush=True)
+            
+            if esp_id:
+                leitura_id = insert_sensor_data(sensor, data, esp_id)
+                if leitura_id:
+                    print(f"[ingest] ✓ Dados salvos no banco (leitura_id={leitura_id})", flush=True)
+                else:
+                    print(f"[ingest] ✗ Falha ao salvar dados no banco", flush=True)
+            else:
+                print(f"[ingest] ✗ Não foi possível registrar ESP '{device_id}'", flush=True)
+        else:
+            print(f"[ingest] ⚠ Payload sem device_id ou data inválida, não salvando no banco", flush=True)
+    except Exception as e:
+        print(f"[ingest] ERRO ao salvar no banco: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+    
     return jsonify({"ok": True})
 
 def esp_latest():
