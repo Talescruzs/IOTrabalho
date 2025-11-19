@@ -137,8 +137,8 @@ def process_access_attempt(data, mqtt_client=None):
         send_command_mqtt(mqtt_client, "ESP32_LEDS", "led_green", {"duration": 3000})
         
         # ESP2: Desbloqueia porta
-        send_command_http("ESP32_DOOR", "unlock_door")
-        send_command_mqtt(mqtt_client, "ESP32_DOOR", "unlock_door")
+        send_command_http("ESP32_DOOR", {"destravar": True})
+        # send_command_mqtt(mqtt_client, "ESP32_DOOR", "unlock_door")
         
         with system_state["lock"]:
             system_state["porta_desbloqueada"] = True
@@ -160,34 +160,33 @@ def process_access_attempt(data, mqtt_client=None):
     
     print("="*60 + "\n", flush=True)
 
-def process_door_sensor(data, mqtt_client=None):
+def process_encoder(data, mqtt_client=None):
     """
     Processa dados do sensor de porta (ESP2)
     
     Formato esperado:
     {
         "device_id": "ESP32_DOOR",
-        "sensor": "door_sensor",
+        "sensor": "encoder",
         "data": {
-            "door_open": 1,
-            "unlocked": 1
+            "alerta": true,
+            "porta_aberta": true
         }
     }
     """
-    door_open = data.get("door_open", 0)
-    unlocked = data.get("unlocked", 0)
+    porta_aberta = data.get("porta_aberta", False)
+    alerta = data.get("alerta", False)
     
     with system_state["lock"]:
         porta_estava_aberta = system_state["porta_aberta"]
-        system_state["porta_aberta"] = (door_open == 1)
-        system_state["porta_desbloqueada"] = (unlocked == 1)
+        system_state["porta_aberta"] = porta_aberta
         
-        if door_open == 1 and not porta_estava_aberta:
+        if porta_aberta and not porta_estava_aberta:
             # Porta acabou de abrir
             system_state["tempo_abertura"] = time.time()
             print(f"[PORTA] 🚪 Porta ABERTA", flush=True)
             
-        elif door_open == 0 and porta_estava_aberta:
+        elif not porta_aberta and porta_estava_aberta:
             # Porta acabou de fechar
             system_state["tempo_abertura"] = None
             print(f"[PORTA] 🚪 Porta FECHADA", flush=True)
@@ -195,6 +194,14 @@ def process_door_sensor(data, mqtt_client=None):
             # ESP4: Apaga LEDs
             send_command_http("ESP32_LEDS", "led_off")
             send_command_mqtt(mqtt_client, "ESP32_LEDS", "led_off")
+        
+        # Processa alerta de timeout
+        if alerta:
+            print(f"[PORTA] ⚠️  ALERTA: Porta aberta por muito tempo!", flush=True)
+            
+            # ESP4: Acende LEDs verde + vermelho (alerta)
+            send_command_http("ESP32_LEDS", "led_alert")
+            send_command_mqtt(mqtt_client, "ESP32_LEDS", "led_alert")
 
 def process_door_alert(data, mqtt_client=None):
     """
@@ -277,8 +284,8 @@ def process_sensor_data(device_id, sensor, data, mqtt_client=None):
         if sensor == "access_attempt":
             process_access_attempt(data, mqtt_client)
             
-        elif sensor == "door_sensor":
-            process_door_sensor(data, mqtt_client)
+        elif sensor == "encoder":
+            process_encoder(data, mqtt_client)
             
         elif sensor == "alert":
             process_door_alert(data, mqtt_client)
