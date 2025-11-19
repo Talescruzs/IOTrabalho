@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Leituras</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #4CAF50;
+            color: white;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .esp-badge {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        .sensor-badge {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+        .value-item {
+            display: inline-block;
+            margin: 2px;
+            padding: 3px 8px;
+            background: #fff3cd;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+        #status {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        .loading {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔬 Teste - Leituras Detalhadas</h1>
+        <div id="status" class="loading">⏳ Carregando dados...</div>
+        
+        <div id="debug"></div>
+        
+        <div id="tableContainer"></div>
+        
+        <button onclick="loadReadings()" style="margin-top: 20px; padding: 10px 20px; cursor: pointer;">
+            🔄 Recarregar
+        </button>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api/detailed-readings?limit=20';
+        
+        function updateStatus(message, type = 'loading') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = type;
+        }
+        
+        function addDebug(message) {
+            const debugDiv = document.getElementById('debug');
+            const p = document.createElement('p');
+            p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            p.style.fontSize = '12px';
+            p.style.color = '#666';
+            debugDiv.appendChild(p);
+            console.log(message);
+        }
+        
+        async function loadReadings() {
+            addDebug('Iniciando carregamento...');
+            updateStatus('⏳ Carregando dados da API...', 'loading');
+            
+            try {
+                addDebug(`Fazendo fetch para: ${API_URL}`);
+                const response = await fetch(API_URL);
+                
+                addDebug(`Resposta recebida com status: ${response.status}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const data = await response.json();
+                addDebug(`Dados recebidos: ${data.count} leituras`);
+                
+                if (!data.ok) {
+                    throw new Error(data.error || 'Erro desconhecido');
+                }
+                
+                if (data.count === 0) {
+                    updateStatus('⚠️ Nenhuma leitura encontrada', 'error');
+                    document.getElementById('tableContainer').innerHTML = '<p>Nenhuma leitura no banco de dados.</p>';
+                    return;
+                }
+                
+                // Renderizar tabela
+                addDebug(`Renderizando ${data.count} leituras...`);
+                renderTable(data.data);
+                
+                updateStatus(`✅ ${data.count} leituras carregadas com sucesso!`, 'success');
+                addDebug('Renderização concluída!');
+                
+            } catch (error) {
+                addDebug(`ERRO: ${error.message}`);
+                updateStatus(`❌ Erro: ${error.message}`, 'error');
+                console.error('Erro completo:', error);
+            }
+        }
+        
+        function renderTable(readings) {
+            let html = '<table>';
+            html += '<thead><tr>';
+            html += '<th>ID</th>';
+            html += '<th>ESP</th>';
+            html += '<th>Sensor</th>';
+            html += '<th>Valores</th>';
+            html += '<th>Timestamp</th>';
+            html += '</tr></thead>';
+            html += '<tbody>';
+            
+            readings.forEach(reading => {
+                const timestamp = new Date(reading.timestamp).toLocaleString('pt-BR');
+                
+                const valores = reading.valores.map(v => 
+                    `<span class="value-item">${v.campo}: ${v.valor.toFixed(2)}</span>`
+                ).join(' ');
+                
+                html += `<tr>
+                    <td><strong>#${reading.leitura_id}</strong></td>
+                    <td><span class="badge esp-badge">${reading.esp}</span></td>
+                    <td><span class="badge sensor-badge">${reading.sensor}</span></td>
+                    <td>${valores}</td>
+                    <td>${timestamp}</td>
+                </tr>`;
+            });
+            
+            html += '</tbody></table>';
+            document.getElementById('tableContainer').innerHTML = html;
+        }
+        
+        // Carregar automaticamente ao abrir a página
+        window.addEventListener('DOMContentLoaded', () => {
+            addDebug('Página carregada, iniciando carregamento automático...');
+            loadReadings();
+        });
+    </script>
+</body>
+</html>

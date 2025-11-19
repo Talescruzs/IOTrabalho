@@ -11,7 +11,7 @@ except ImportError:
         return app
 from Front.routes import api_bp
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates', static_folder='static')
 CORS(app, supports_credentials=True)
 print("CORS (Front) habilitado para todos os origins.", flush=True)
 app.register_blueprint(api_bp)
