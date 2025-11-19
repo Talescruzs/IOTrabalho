@@ -1,0 +1,314 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+header {
+    background: white;
+    padding: 20px 30px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    color: #333;
+    font-size: 28px;
+    margin-bottom: 5px;
+}
+
+.subtitle {
+    color: #666;
+    font-size: 14px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card h3 {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+.stat-value {
+    font-size: 36px;
+    font-weight: bold;
+    color: #667eea;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #999;
+    margin-top: 5px;
+}
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.chart-card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.chart-card h2 {
+    color: #333;
+    font-size: 18px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+}
+
+.refresh-btn {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s;
+    margin-right: 10px;
+}
+
+.refresh-btn:hover {
+    background: #5568d3;
+}
+
+.refresh-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+.status-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.status-online {
+    background: #4caf50;
+}
+
+.status-offline {
+    background: #f44336;
+}
+
+.last-update {
+    font-size: 12px;
+    color: #999;
+    margin-top: 10px;
+}
+
+.readings-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.readings-table th,
+.readings-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.readings-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #666;
+    font-size: 13px;
+    text-transform: uppercase;
+    position: sticky;
+    top: 0;
+}
+
+.readings-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.esp-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #e3f2fd;
+    color: #1976d2;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.sensor-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background: #f3e5f5;
+    color: #7b1fa2;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.value-cell {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+}
+
+.value-item {
+    display: inline-block;
+    margin: 2px 4px;
+    padding: 3px 6px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    border-radius: 3px;
+}
+
+.timestamp-cell {
+    color: #666;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.table-container {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.empty-state-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.valores-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.valor-card {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+.valor-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.valor-timestamp {
+    font-size: 11px;
+    color: #999;
+}
+
+.valor-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.valor-field {
+    background: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.valor-field-name {
+    color: #666;
+    font-weight: 600;
+}
+
+.valor-field-value {
+    color: #2e7d32;
+    font-family: 'Courier New', monospace;
+}
+
+.esp-filter-btn {
+    display: inline-block;
+    margin: 5px 5px 5px 0;
+    padding: 8px 15px;
+    background: #e3f2fd;
+    color: #1976d2;
+    border: 2px solid #1976d2;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.esp-filter-btn:hover {
+    background: #1976d2;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(25, 118, 210, 0.3);
+}
+
+.esp-filter-btn.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.filter-info {
+    display: inline-block;
+    padding: 6px 12px;
+    background: #fff3cd;
+    color: #856404;
+    border-radius: 4px;
+    font-size: 13px;
+    margin-top: 10px;
+}

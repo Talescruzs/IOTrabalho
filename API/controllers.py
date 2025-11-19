@@ -263,6 +263,7 @@ def get_sensor_history():
 def get_detailed_readings():
     """Retorna leituras detalhadas com ESP, sensor e valores"""
     limit = int(request.args.get('limit', 50))
+    esp_filter = request.args.get('esp')  # Filtro opcional por ESP
     
     try:
         from API.db_helper import get_db_connection
@@ -273,8 +274,8 @@ def get_detailed_readings():
         with get_db_connection() as conn:
             cur = conn.cursor(dictionary=True)
             
-            # Busca leituras com todos os detalhes
-            cur.execute("""
+            # Query base
+            query = """
                 SELECT 
                     l.id as leitura_id,
                     l.timestamp,
@@ -283,9 +284,19 @@ def get_detailed_readings():
                 FROM leituras l
                 JOIN sensores s ON l.sensor_id = s.id
                 JOIN esps e ON l.esp_id = e.id
-                ORDER BY l.timestamp DESC
-                LIMIT %s
-            """, (limit,))
+            """
+            
+            params = []
+            
+            # Adiciona filtro por ESP se fornecido
+            if esp_filter:
+                query += " WHERE e.nome = %s"
+                params.append(esp_filter)
+            
+            query += " ORDER BY l.timestamp DESC LIMIT %s"
+            params.append(limit)
+            
+            cur.execute(query, params)
             
             leituras = cur.fetchall()
             
@@ -312,11 +323,137 @@ def get_detailed_readings():
             return jsonify({
                 "ok": True,
                 "count": len(leituras),
-                "data": leituras
+                "data": leituras,
+                "filtered_by_esp": esp_filter
             })
             
     except Exception as e:
         print(f"[detailed_readings] ERRO: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+def get_esp_data():
+    """Retorna dados completos filtrados por ESP específica"""
+    esp_name = request.args.get('esp')
+    
+    if not esp_name:
+        return jsonify({"ok": False, "error": "Parâmetro 'esp' é obrigatório"}), 400
+    
+    try:
+        from API.db_helper import get_db_connection
+    except ImportError:
+        return jsonify({"ok": False, "error": "db_helper não disponível"}), 500
+    
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor(dictionary=True)
+            
+            # 1. Info da ESP
+            cur.execute("""
+                SELECT id, nome, ip_address
+                FROM esps
+                WHERE nome = %s
+            """, (esp_name,))
+            esp_info = cur.fetchone()
+            
+            if not esp_info:
+                return jsonify({"ok": False, "error": f"ESP '{esp_name}' não encontrada"}), 404
+            
+            # 2. Leituras por sensor desta ESP
+            cur.execute("""
+                SELECT s.nome as sensor, COUNT(l.id) as total_leituras
+                FROM sensores s
+                LEFT JOIN leituras l ON s.id = l.sensor_id AND l.esp_id = %s
+                WHERE EXISTS (
+                    SELECT 1 FROM leituras l2 WHERE l2.sensor_id = s.id AND l2.esp_id = %s
+                )
+                GROUP BY s.id, s.nome
+                ORDER BY total_leituras DESC
+            """, (esp_info['id'], esp_info['id']))
+            leituras_por_sensor = cur.fetchall()
+            
+            # 3. Últimas leituras desta ESP com valores
+            cur.execute("""
+                SELECT 
+                    l.id as leitura_id,
+                    l.timestamp,
+                    s.nome as sensor
+                FROM leituras l
+                JOIN sensores s ON l.sensor_id = s.id
+                WHERE l.esp_id = %s
+                ORDER BY l.timestamp DESC
+                LIMIT 50
+            """, (esp_info['id'],))
+            
+            leituras = cur.fetchall()
+            
+            # Para cada leitura, busca os valores
+            for leitura in leituras:
+                leitura_id = leitura['leitura_id']
+                
+                cur.execute("""
+                    SELECT campo, valor
+                    FROM valores
+                    WHERE leitura_id = %s
+                """, (leitura_id,))
+                
+                valores = cur.fetchall()
+                leitura['valores'] = valores
+                
+                # Converter datetime
+                if leitura['timestamp']:
+                    leitura['timestamp'] = leitura['timestamp'].isoformat()
+            
+            # 4. Valores recentes (agrupados por sensor)
+            cur.execute("""
+                SELECT 
+                    s.nome as sensor,
+                    MAX(l.timestamp) as timestamp
+                FROM leituras l
+                JOIN sensores s ON l.sensor_id = s.id
+                WHERE l.esp_id = %s
+                GROUP BY s.id, s.nome
+            """, (esp_info['id'],))
+            
+            sensores_recentes = cur.fetchall()
+            valores_recentes = []
+            
+            for sensor_info in sensores_recentes:
+                cur.execute("""
+                    SELECT v.campo, v.valor, l.timestamp
+                    FROM leituras l
+                    JOIN valores v ON l.id = v.leitura_id
+                    JOIN sensores s ON l.sensor_id = s.id
+                    WHERE l.esp_id = %s AND s.nome = %s
+                    ORDER BY l.timestamp DESC
+                    LIMIT 1
+                """, (esp_info['id'], sensor_info['sensor']))
+                
+                valores = cur.fetchall()
+                if valores:
+                    for valor in valores:
+                        valores_recentes.append({
+                            'sensor': sensor_info['sensor'],
+                            'campo': valor['campo'],
+                            'valor': valor['valor'],
+                            'timestamp': valor['timestamp'].isoformat() if valor['timestamp'] else None
+                        })
+            
+            cur.close()
+            
+            return jsonify({
+                "ok": True,
+                "data": {
+                    "esp_info": esp_info,
+                    "leituras_por_sensor": leituras_por_sensor,
+                    "ultimas_leituras": leituras,
+                    "valores_recentes": valores_recentes
+                }
+            })
+            
+    except Exception as e:
+        print(f"[get_esp_data] ERRO: {e}", flush=True)
         import traceback
         traceback.print_exc()
         return jsonify({"ok": False, "error": str(e)}), 500
