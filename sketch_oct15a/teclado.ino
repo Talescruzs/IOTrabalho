@@ -1,4 +1,6 @@
 // #include <Keypad.h> // Biblioteca do código
+// #include "teclado.h"
+// #include "comunicacao.h"
 
 // const byte LINHAS = 4; // Linhas do teclado
 // const byte COLUNAS = 4; // Colunas do teclado
@@ -17,13 +19,16 @@
 // Keypad teclado_personalizado = Keypad(makeKeymap(TECLAS_MATRIZ), PINOS_LINHAS, PINOS_COLUNAS, LINHAS, COLUNAS); // Inicia teclado
 
 // void setup() {
-//   Serial.begin(9600); // Inicia porta serial
+//   Serial.begin(9600);
+    // tecladoInit();
 // }
 
 // void loop() {
-//   char leitura_teclas = teclado_personalizado.getKey(); // Atribui a variável a leitura do teclado
-
-//   if (leitura_teclas) { // Se alguma tecla foi pressionada
-//     Serial.println(leitura_teclas); // Imprime a tecla pressionada na porta serial
-//   }
+//     comunicacaoTick();
+//     char tecla_lida = tecladoLerTecla(); // Atribui a variável a leitura do teclado
+//     if (tecla_lida) {  //Se alguma tecla foi pressionada
+//         JSONVar dados;
+//         dados["character"] = tecla_lida;
+//         enviarDadosSensor("teclado", dados);
+//     }
 // }
