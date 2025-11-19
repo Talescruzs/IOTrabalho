@@ -1,0 +1,321 @@
+// ============================================================================
+// SISTEMA DE CONTROLE DE ACESSO - 4 ESPs Integradas
+// ============================================================================
+// ESP1: Teclado + Motor Vibração
+// ESP2: Relé + Encoder (Porta)
+// ESP3: DHT11 (Temperatura e Umidade)
+// ESP4: 3 LEDs (Verde, Vermelho, Amarelo)
+// ============================================================================
+
+#include "comunicacao.h"
+#include "teclado.h"
+
+// ============================================================================
+// CONFIGURAÇÃO - Escolha qual ESP este código representa
+// ============================================================================
+#define ESP_TYPE 1  // 1=Teclado, 2=Porta, 3=Ambiente, 4=LEDs
+
+// ============================================================================
+// PINOS - Configure conforme seu hardware
+// ============================================================================
+#if ESP_TYPE == 1
+  // ESP1 - Teclado + Motor Vibração
+  #define MOTOR_PIN 25
+  const char* DEVICE_NAME = "ESP32_KEYPAD";
+  
+#elif ESP_TYPE == 2
+  // ESP2 - Relé + Encoder
+  #define RELAY_PIN 26
+  #define ENCODER_PIN 27
+  const char* DEVICE_NAME = "ESP32_DOOR";
+  
+#elif ESP_TYPE == 3
+  // ESP3 - DHT11
+  #define DHT_PIN 4
+  const char* DEVICE_NAME = "ESP32_CLIMATE";
+  
+#elif ESP_TYPE == 4
+  // ESP4 - LEDs
+  #define LED_VERDE_PIN 32
+  #define LED_VERMELHO_PIN 33
+  #define LED_AMARELO_PIN 25
+  const char* DEVICE_NAME = "ESP32_LEDS";
+#endif
+
+// ============================================================================
+// VARIÁVEIS GLOBAIS
+// ============================================================================
+#if ESP_TYPE == 1
+  String senhaDigitada = "";
+  const String SENHA_CORRETA = "1234";
+  
+#elif ESP_TYPE == 2
+  bool portaDesbloqueada = false;
+  bool portaAberta = false;
+  unsigned long tempoAbertura = 0;
+  const unsigned long TIMEOUT_PORTA = 5000; // 5 segundos
+  
+#elif ESP_TYPE == 3
+  float temperatura = 25.0;
+  float umidade = 60.0;
+  const float TEMP_LIMITE = 30.0;
+#endif
+
+// ============================================================================
+// CALLBACK PARA PROCESSAR COMANDOS DO SERVIDOR
+// ============================================================================
+void processarComando(const String& command, const JSONVar& params) {
+  Serial.println("\n[COMANDO RECEBIDO] " + command);
+  Serial.println("[PARAMS] " + JSON.stringify(params));
+  
+#if ESP_TYPE == 1
+  // ESP1 - Comandos de vibração
+  if (command == "vibrate_short") {
+    digitalWrite(MOTOR_PIN, HIGH);
+    delay(1000); // 1 segundo
+    digitalWrite(MOTOR_PIN, LOW);
+    Serial.println("✓ Vibração curta executada");
+  }
+  else if (command == "vibrate_long") {
+    digitalWrite(MOTOR_PIN, HIGH);
+    delay(3000); // 3 segundos
+    digitalWrite(MOTOR_PIN, LOW);
+    Serial.println("✓ Vibração longa executada");
+  }
+  
+#elif ESP_TYPE == 2
+  // ESP2 - Comandos de porta
+  if (command == "unlock_door") {
+    digitalWrite(RELAY_PIN, HIGH);
+    portaDesbloqueada = true;
+    Serial.println("✓ Porta desbloqueada");
+    
+    // Envia confirmação
+    JSONVar resposta;
+    resposta["door_unlocked"] = true;
+    enviarDadosSensor("door_status", resposta);
+  }
+  else if (command == "lock_door") {
+    digitalWrite(RELAY_PIN, LOW);
+    portaDesbloqueada = false;
+    Serial.println("✓ Porta bloqueada");
+    
+    JSONVar resposta;
+    resposta["door_unlocked"] = false;
+    enviarDadosSensor("door_status", resposta);
+  }
+  
+#elif ESP_TYPE == 3
+  // ESP3 - Comandos de ambiente (se necessário)
+  if (command == "reset_alerts") {
+    Serial.println("✓ Alertas resetados");
+  }
+  
+#elif ESP_TYPE == 4
+  // ESP4 - Comandos de LEDs
+  if (command == "led_green") {
+    int duration = params.hasOwnProperty("duration") ? (int)params["duration"] : 3000;
+    digitalWrite(LED_VERDE_PIN, HIGH);
+    digitalWrite(LED_VERMELHO_PIN, LOW);
+    digitalWrite(LED_AMARELO_PIN, LOW);
+    delay(duration);
+    digitalWrite(LED_VERDE_PIN, LOW);
+    Serial.println("✓ LED verde " + String(duration) + "ms");
+  }
+  else if (command == "led_red") {
+    int duration = params.hasOwnProperty("duration") ? (int)params["duration"] : 3000;
+    digitalWrite(LED_VERMELHO_PIN, HIGH);
+    digitalWrite(LED_VERDE_PIN, LOW);
+    digitalWrite(LED_AMARELO_PIN, LOW);
+    delay(duration);
+    digitalWrite(LED_VERMELHO_PIN, LOW);
+    Serial.println("✓ LED vermelho " + String(duration) + "ms");
+  }
+  else if (command == "led_yellow") {
+    int duration = params.hasOwnProperty("duration") ? (int)params["duration"] : 3000;
+    digitalWrite(LED_AMARELO_PIN, HIGH);
+    digitalWrite(LED_VERDE_PIN, LOW);
+    digitalWrite(LED_VERMELHO_PIN, LOW);
+    delay(duration);
+    digitalWrite(LED_AMARELO_PIN, LOW);
+    Serial.println("✓ LED amarelo " + String(duration) + "ms");
+  }
+  else if (command == "led_alert") {
+    // Verde + Vermelho = Alerta de porta aberta
+    digitalWrite(LED_VERDE_PIN, HIGH);
+    digitalWrite(LED_VERMELHO_PIN, HIGH);
+    digitalWrite(LED_AMARELO_PIN, LOW);
+    Serial.println("✓ LEDs de alerta ativados");
+  }
+  else if (command == "led_off") {
+    digitalWrite(LED_VERDE_PIN, LOW);
+    digitalWrite(LED_VERMELHO_PIN, LOW);
+    digitalWrite(LED_AMARELO_PIN, LOW);
+    Serial.println("✓ Todos LEDs desligados");
+  }
+#endif
+}
+
+// ============================================================================
+// SETUP
+// ============================================================================
+void setup() {
+  Serial.begin(9600);
+  delay(1000);
+  
+  Serial.println("\n=================================");
+  Serial.println("SISTEMA DE CONTROLE DE ACESSO");
+  Serial.println("ESP: " + String(DEVICE_NAME));
+  Serial.println("=================================\n");
+  
+  // Inicializa comunicação
+  comunicacaoInit(DEVICE_NAME);
+  comunicacaoSetCallback(processarComando);
+  
+  // Configuração específica de cada ESP
+#if ESP_TYPE == 1
+  tecladoInit();
+  pinMode(MOTOR_PIN, OUTPUT);
+  digitalWrite(MOTOR_PIN, LOW);
+  Serial.println("✓ Teclado e motor inicializados");
+  
+#elif ESP_TYPE == 2
+  pinMode(RELAY_PIN, OUTPUT);
+  pinMode(ENCODER_PIN, INPUT_PULLUP);
+  digitalWrite(RELAY_PIN, LOW);
+  Serial.println("✓ Relé e encoder inicializados");
+  
+#elif ESP_TYPE == 3
+  pinMode(DHT_PIN, INPUT);
+  Serial.println("✓ DHT11 inicializado");
+  
+#elif ESP_TYPE == 4
+  pinMode(LED_VERDE_PIN, OUTPUT);
+  pinMode(LED_VERMELHO_PIN, OUTPUT);
+  pinMode(LED_AMARELO_PIN, OUTPUT);
+  digitalWrite(LED_VERDE_PIN, LOW);
+  digitalWrite(LED_VERMELHO_PIN, LOW);
+  digitalWrite(LED_AMARELO_PIN, LOW);
+  Serial.println("✓ LEDs inicializados");
+#endif
+
+  Serial.println("\n✓ Sistema pronto!\n");
+}
+
+// ============================================================================
+// LOOP
+// ============================================================================
+void loop() {
+  comunicacaoTick();
+  
+#if ESP_TYPE == 1
+  // ========== ESP1: TECLADO ==========
+  char tecla = tecladoLerTecla();
+  
+  if (tecla) {
+    if (tecla == '#') {
+      // Valida senha
+      bool autorizado = (senhaDigitada == SENHA_CORRETA);
+      
+      Serial.println("\n--- TENTATIVA DE ACESSO ---");
+      Serial.println("Senha: " + senhaDigitada);
+      Serial.println("Status: " + String(autorizado ? "AUTORIZADO" : "NEGADO"));
+      Serial.println("---------------------------\n");
+      
+      // Envia dados para servidor
+      JSONVar dados;
+      dados["password"] = senhaDigitada.c_str();
+      dados["authorized"] = autorizado ? 1 : 0;
+      dados["length"] = (int)senhaDigitada.length();
+      enviarDadosSensor("access_attempt", dados);
+      
+      senhaDigitada = "";
+    }
+    else if (tecla == '*') {
+      senhaDigitada = "";
+      Serial.println("Senha limpa");
+    }
+    else {
+      senhaDigitada += tecla;
+      Serial.print("Senha: ");
+      for (int i = 0; i < senhaDigitada.length(); i++) Serial.print("*");
+      Serial.println();
+    }
+  }
+  
+#elif ESP_TYPE == 2
+  // ========== ESP2: PORTA ==========
+  bool encoderState = digitalRead(ENCODER_PIN);
+  bool portaAgoraAberta = (encoderState == LOW); // LOW = obstruído = porta aberta
+  
+  if (portaAgoraAberta != portaAberta) {
+    portaAberta = portaAgoraAberta;
+    
+    if (portaAberta) {
+      tempoAbertura = millis();
+      Serial.println("🚪 Porta ABERTA");
+    } else {
+      Serial.println("🚪 Porta FECHADA");
+    }
+    
+    // Envia status
+    JSONVar dados;
+    dados["door_open"] = portaAberta ? 1 : 0;
+    dados["unlocked"] = portaDesbloqueada ? 1 : 0;
+    enviarDadosSensor("door_sensor", dados);
+  }
+  
+  // Verifica timeout de porta aberta
+  if (portaAberta && (millis() - tempoAbertura > TIMEOUT_PORTA)) {
+    static unsigned long ultimoAlerta = 0;
+    if (millis() - ultimoAlerta > 10000) { // Alerta a cada 10s
+      Serial.println("⚠️  ALERTA: Porta aberta há muito tempo!");
+      
+      JSONVar alerta;
+      alerta["alert"] = "door_open_timeout";
+      alerta["duration"] = (int)((millis() - tempoAbertura) / 1000);
+      enviarDadosSensor("alert", alerta);
+      
+      ultimoAlerta = millis();
+    }
+  }
+  
+#elif ESP_TYPE == 3
+  // ========== ESP3: AMBIENTE ==========
+  static unsigned long ultimaLeitura = 0;
+  if (millis() - ultimaLeitura > 1000) { // A cada 1 segundo
+    // Simula leitura DHT11 (substitua por leitura real)
+    temperatura = 25.0 + random(-2, 5);
+    umidade = 60.0 + random(-5, 5);
+    
+    JSONVar dados;
+    dados["temperature"] = temperatura;
+    dados["humidity"] = umidade;
+    dados["temp_alert"] = (temperatura > TEMP_LIMITE) ? 1 : 0;
+    enviarDadosSensor("climate", dados);
+    
+    if (temperatura > TEMP_LIMITE) {
+      Serial.println("⚠️  ALERTA: Temperatura alta: " + String(temperatura) + "°C");
+    }
+    
+    ultimaLeitura = millis();
+  }
+  
+#elif ESP_TYPE == 4
+  // ========== ESP4: LEDs ==========
+  // LEDs são controlados apenas por comandos do servidor
+  // Loop vazio, apenas mantém comunicação ativa
+  static unsigned long ultimoStatus = 0;
+  if (millis() - ultimoStatus > 30000) {
+    JSONVar status;
+    status["green"] = digitalRead(LED_VERDE_PIN);
+    status["red"] = digitalRead(LED_VERMELHO_PIN);
+    status["yellow"] = digitalRead(LED_AMARELO_PIN);
+    enviarDadosSensor("led_status", status);
+    
+    ultimoStatus = millis();
+  }
+#endif
+
+  delay(10);
+}

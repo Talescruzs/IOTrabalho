@@ -29,6 +29,20 @@ private:
   unsigned long _lastMqttReconnect;
   unsigned long _lastSensorSend;
   
+  // Callback para comandos externos
+  static void (*_commandCallback)(const String& command, const JSONVar& params);
+  
+  // Processa comando recebido
+  void processCommand(const String& command, const JSONVar& params) {
+    Serial.println("\n[COMANDO] Recebido: " + command);
+    
+    if (_commandCallback != nullptr) {
+      _commandCallback(command, params);
+    } else {
+      Serial.println("[COMANDO] Nenhum callback registrado!");
+    }
+  }
+  
   // Callback MQTT estática (necessário para PubSubClient)
   static Connection* _instance;
   static void staticMqttCallback(char* topic, byte* payload, unsigned int length) {
@@ -48,6 +62,16 @@ private:
       message += (char)payload[i];
     }
     Serial.println(message);
+    
+    // Tenta parsear como JSON para processar comandos
+    JSONVar parsedMsg = JSON.parse(message);
+    if (JSON.typeof(parsedMsg) != "undefined") {
+      if (parsedMsg.hasOwnProperty("command")) {
+        String command = (const char*)parsedMsg["command"];
+        JSONVar params = parsedMsg.hasOwnProperty("params") ? parsedMsg["params"] : JSONVar();
+        processCommand(command, params);
+      }
+    }
     
     // Pisca LED quando recebe confirmação
     digitalWrite(_ledPin, HIGH);
@@ -334,57 +358,110 @@ public:
     
     Serial.println("Novo cliente HTTP.");
     String currentLine = "";
+    String requestBody = "";
     bool requestedStatus = false;
+    bool isPost = false;
+    int contentLength = 0;
+    bool headersEnded = false;
     
     while (client.connected()) {
       if (client.available()) {
         char c = client.read();
-        Serial.write(c);
         
-        if (c == '\n') {
-          if (currentLine.length() == 0) {
-            if (requestedStatus) {
-              // Responde com status em JSON
-              double rpm = (millis() / 100) % 4000;
-              double temp = 20.0 + ((millis() / 1000) % 15);
-              const char* keys[] = {"rpm", "temp"};
-              double vals[] = {rpm, temp};
+        if (!headersEnded) {
+          Serial.write(c);
+          
+          if (c == '\n') {
+            if (currentLine.length() == 0) {
+              headersEnded = true;
               
-              JSONVar data;
-              for (int i = 0; i < 2; i++) {
-                data[keys[i]] = vals[i];
+              // Se for POST, lê o body
+              if (isPost && contentLength > 0) {
+                for (int i = 0; i < contentLength && client.available(); i++) {
+                  requestBody += (char)client.read();
+                }
+                Serial.println("\n[HTTP POST] Body: " + requestBody);
+                
+                // Processa comando POST
+                JSONVar command = JSON.parse(requestBody);
+                if (JSON.typeof(command) != "undefined" && command.hasOwnProperty("command")) {
+                  String cmd = (const char*)command["command"];
+                  JSONVar params = command.hasOwnProperty("params") ? command["params"] : JSONVar();
+                  processCommand(cmd, params);
+                  
+                  // Responde com sucesso
+                  client.println("HTTP/1.1 200 OK");
+                  client.println("Content-Type: application/json");
+                  client.println("Connection: close");
+                  client.println();
+                  client.print("{\"status\":\"ok\",\"command\":\"");
+                  client.print(cmd);
+                  client.println("\"}");
+                } else {
+                  client.println("HTTP/1.1 400 Bad Request");
+                  client.println("Connection: close");
+                  client.println();
+                }
+                break;
               }
               
-              JSONVar statusObj;
-              statusObj["device"] = _deviceId;
-              statusObj["sensor"] = "motor";
-              statusObj["data"] = data;
-              statusObj["ts"] = (double)millis();
-              
-              String json = JSON.stringify(statusObj);
-              sendJsonResponse(client, json);
+              // Resposta para GET
+              if (!isPost) {
+                if (requestedStatus) {
+                  // Responde com status em JSON
+                  double rpm = (millis() / 100) % 4000;
+                  double temp = 20.0 + ((millis() / 1000) % 15);
+                  const char* keys[] = {"rpm", "temp"};
+                  double vals[] = {rpm, temp};
+                  
+                  JSONVar data;
+                  for (int i = 0; i < 2; i++) {
+                    data[keys[i]] = vals[i];
+                  }
+                  
+                  JSONVar statusObj;
+                  statusObj["device"] = _deviceId;
+                  statusObj["sensor"] = "motor";
+                  statusObj["data"] = data;
+                  statusObj["ts"] = (double)millis();
+                  
+                  String json = JSON.stringify(statusObj);
+                  sendJsonResponse(client, json);
+                } else {
+                  // Responde com HTML
+                  client.println("HTTP/1.1 200 OK");
+                  client.println("Content-type:text/html");
+                  client.println();
+                  client.print("Click <a href=\"/H\">here</a> to turn LED ON.<br>");
+                  client.print("Click <a href=\"/L\">here</a> to turn LED OFF.<br>");
+                  client.print("Get <a href=\"/status\">status</a> as JSON.<br>");
+                  client.print("POST /command with JSON: {\"command\":\"...\",\"params\":{...}}<br>");
+                  client.println();
+                }
+                break;
+              }
             } else {
-              // Responde com HTML
-              client.println("HTTP/1.1 200 OK");
-              client.println("Content-type:text/html");
-              client.println();
-              client.print("Click <a href=\"/H\">here</a> to turn LED ON.<br>");
-              client.print("Click <a href=\"/L\">here</a> to turn LED OFF.<br>");
-              client.print("Get <a href=\"/status\">status</a> as JSON.<br>");
-              client.println();
+              currentLine = "";
             }
-            break;
-          } else {
-            currentLine = "";
+          } else if (c != '\r') {
+            currentLine += c;
           }
-        } else if (c != '\r') {
-          currentLine += c;
+          
+          // Detecta método POST
+          if (currentLine.startsWith("POST")) {
+            isPost = true;
+          }
+          
+          // Detecta Content-Length
+          if (currentLine.startsWith("Content-Length: ")) {
+            contentLength = currentLine.substring(16).toInt();
+          }
+          
+          // Processa comandos GET
+          if (currentLine.endsWith("GET /H")) digitalWrite(_ledPin, HIGH);
+          if (currentLine.endsWith("GET /L")) digitalWrite(_ledPin, LOW);
+          if (currentLine.endsWith("GET /status")) requestedStatus = true;
         }
-        
-        // Processa comandos
-        if (currentLine.endsWith("GET /H")) digitalWrite(_ledPin, HIGH);
-        if (currentLine.endsWith("GET /L")) digitalWrite(_ledPin, LOW);
-        if (currentLine.endsWith("GET /status")) requestedStatus = true;
       }
     }
     
@@ -426,39 +503,66 @@ public:
   bool isMQTTConnected() const { return _mqttConnected; }
   String getDeviceIP() const { return _deviceIP; }
   String getDeviceId() const { return String(_deviceId); }
+  
+  // Setter para callback de comandos
+  void setCommandCallback(void (*callback)(const String&, const JSONVar&)) {
+    _commandCallback = callback;
+  }
 };
 
 // Inicializa ponteiro estático
 Connection* Connection::_instance = nullptr;
+void (*Connection::_commandCallback)(const String&, const JSONVar&) = nullptr;
 
 // Configurações
 char* ssid = "osBalakinhas";
 char* password = "balakubaku";
 const char* MQTT_BROKER = "192.168.143.117";
-const char* DEVICE_ID = "esp32";
 
 // Configurações da API HTTP
 const char* API_SERVER_HOST = "192.168.143.117";
 const uint16_t API_SERVER_PORT = 5000;
 const char* API_ENDPOINT = "/esp/ingest";
 
-// Instância global da conexão
-Connection connection(ssid, password, DEVICE_ID, MQTT_BROKER);
+// Instância global da conexão (será inicializada no comunicacaoInit)
+Connection* connectionPtr = nullptr;
 
 // ============================================================================
 // Funções de interface (compatibilidade com código antigo)
 // ============================================================================
 
-void comunicacaoInit() {
-  connection.begin();
+void comunicacaoInit(String nome_esp) {
+  // Converte String para const char*
+  static String deviceIdStatic;
+  deviceIdStatic = nome_esp;
+  const char* deviceId = deviceIdStatic.c_str();
+  
+  // Cria a conexão com o nome personalizado da ESP
+  connectionPtr = new Connection(ssid, password, deviceId, MQTT_BROKER);
+  connectionPtr->begin();
+  
+  Serial.println("✓ Comunicação inicializada com device_id: " + nome_esp);
+}
+
+void comunicacaoSetCallback(void (*callback)(const String&, const JSONVar&)) {
+  if (connectionPtr) {
+    connectionPtr->setCommandCallback(callback);
+    Serial.println("✓ Callback de comandos registrado");
+  } else {
+    Serial.println("✗ Conexão não inicializada! Chame comunicacaoInit() primeiro.");
+  }
 }
 
 void comunicacaoProcess() {
-  connection.processHTTP();
+  if (connectionPtr) {
+    connectionPtr->processHTTP();
+  }
 }
 
 void comunicacaoTick() {
-  connection.tick();
+  if (connectionPtr) {
+    connectionPtr->tick();
+  }
 }
 
 // ============================================================================
@@ -467,16 +571,28 @@ void comunicacaoTick() {
 
 // Envia dados de sensor via MQTT usando JSONVar
 bool enviarDadosSensor(const String& sensorName, const JSONVar& data) {
-  return connection.sendSensorData(sensorName, data);
+  if (connectionPtr) {
+    return connectionPtr->sendSensorData(sensorName, data);
+  }
+  Serial.println("✗ Conexão não inicializada! Chame comunicacaoInit() primeiro.");
+  return false;
 }
 
 // Envia dados de sensor via MQTT usando arrays
 bool enviarDadosSensor(const String& sensorName, const char* keys[], const double values[], size_t count) {
-  return connection.sendSensorData(sensorName, keys, values, count);
+  if (connectionPtr) {
+    return connectionPtr->sendSensorData(sensorName, keys, values, count);
+  }
+  Serial.println("✗ Conexão não inicializada! Chame comunicacaoInit() primeiro.");
+  return false;
 }
 
 // Envia dados para servidor externo via HTTP POST
 bool enviarHTTPPost(const char* serverHost, uint16_t serverPort, const String& endpoint, const JSONVar& data) {
-  String jsonPayload = JSON.stringify(data);
-  return connection.sendHTTPPost(serverHost, serverPort, endpoint, jsonPayload);
+  if (connectionPtr) {
+    String jsonPayload = JSON.stringify(data);
+    return connectionPtr->sendHTTPPost(serverHost, serverPort, endpoint, jsonPayload);
+  }
+  Serial.println("✗ Conexão não inicializada! Chame comunicacaoInit() primeiro.");
+  return false;
 }
