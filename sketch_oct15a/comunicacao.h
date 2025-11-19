@@ -7,11 +7,19 @@
 #include <Arduino_JSON.h>
 
 // ============================================================================
+// Tipo de callback para processar comandos recebidos do servidor
+// ============================================================================
+typedef void (*CommandCallback)(const String& command, const JSONVar& params);
+
+// ============================================================================
 // Funções de inicialização e manutenção
 // ============================================================================
 
 // Inicializa WiFi, MQTT e HTTP
-void comunicacaoInit();
+void comunicacaoInit(String nome_esp);
+
+// Registra callback para processar comandos do servidor
+void comunicacaoSetCallback(CommandCallback callback);
 
 // Processa requisições HTTP
 void comunicacaoProcess();

@@ -15,6 +15,14 @@ except ImportError:
     print("[mqtt] AVISO: db_helper não disponível, dados não serão salvos no BD", flush=True)
     DB_AVAILABLE = False
 
+# Importa sistema de controle de acesso
+try:
+    from API.access_control import process_sensor_data, update_esp_ip
+    ACCESS_CONTROL_AVAILABLE = True
+except ImportError:
+    print("[mqtt] AVISO: access_control não disponível", flush=True)
+    ACCESS_CONTROL_AVAILABLE = False
+
 # Dicionário para armazenar IPs registrados
 registered_devices = {}
 
@@ -56,6 +64,10 @@ def on_message(cl, userdata, msg):
             registered_devices[device_id] = ip
             print(f"✓ Dispositivo registrado em memória: {device_id} com IP: {ip}", flush=True)
             
+            # Atualiza IP no sistema de controle de acesso
+            if ACCESS_CONTROL_AVAILABLE:
+                update_esp_ip(device_id, ip)
+            
             # Registra/atualiza no banco de dados
             if DB_AVAILABLE:
                 esp_id = register_or_update_esp(device_id, ip)
@@ -89,6 +101,11 @@ def on_message(cl, userdata, msg):
             
             if isinstance(fields, dict):
                 print(f"[mqtt] Dados de {device_id}/{sensor}: {fields}", flush=True)
+                
+                # Processa lógica do sistema de controle de acesso
+                if ACCESS_CONTROL_AVAILABLE:
+                    global client
+                    process_sensor_data(device_id, sensor, fields, client)
                 
                 # Salva os dados no banco se disponível
                 if DB_AVAILABLE:
