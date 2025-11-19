@@ -15,32 +15,32 @@ long tempo_ini = 0;
 const int intervalo = 5000;
 
 void processarComando(const String& command, const JSONVar& params) {
-  if (command == "destravar") {
-    if (params.hasOwnProperty("destravar")) {
-      bool retornoValue = (bool)params["destravar"];
-      
-      if (retornoValue == true) {
-        digitalWrite(rele, HIGH);
-      }
+    if (command == "destravar") {
+        if (params.hasOwnProperty("destravar")) {
+            bool retornoValue = (bool)params["destravar"];
+        
+            if (retornoValue == true) {
+                digitalWrite(rele, HIGH);
+            }
+        }
     }
-  }
-  else {
-    Serial.println("Comando desconhecido: " + command);
-  }
+    else {
+        Serial.println("Comando desconhecido: " + command);
+    }
 }
 
 void setup() {
+    Serial.begin(9600);
     pinMode(encoder, INPUT);
     pinMode(rele, OUTPUT);
     comunicacaoInit("ESP32_DOOR");
     comunicacaoSetCallback(processarComando);
-    Serial.begin(9600);
 }
 
 void loop() {
     comunicacaoTick();
     long tempo_atual = millis();
-    bool novo_dado = digitalRead(encoder);
+    bool novo_dado = !digitalRead(encoder);
     if (tempo_atual - tempo_ini >= intervalo) {
         if (dado == LOW) {
             JSONVar dados;
