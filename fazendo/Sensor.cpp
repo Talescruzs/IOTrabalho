@@ -17,7 +17,7 @@ String Sensor::toJSON() {
     JsonStore store;
 
     for (int i = 0; i < numPins; i++) {
-        String key = "pin" + String(pins[i].getPin());
+        String key = this.name + String(pins[i].getPin());
         store.setNumber(key, pins[i].read()); // Armazene o valor do pino
     }
 
@@ -27,7 +27,7 @@ String Sensor::toJSON() {
 JsonDocument Sensor::readValues() {
     JsonStore store;
     for (int i = 0; i < numPins; i++) {
-        String key = "pin" + String(pins[i].getPin());
+        String key = this.name + String(pins[i].getPin());
         store.setNumber(key, pins[i].read());
     }
     return store;

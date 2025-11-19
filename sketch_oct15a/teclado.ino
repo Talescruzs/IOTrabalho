@@ -1,18 +1,3 @@
-// /*******************************************************************************
-// * Teclado Matricial 16 Teclas : Primeiros Passos (v1.0)
-// *
-// * Codigo base para exibir as teclas pressionadas no monitor serial da IDE.
-// *
-// * Copyright 2020 RoboCore.
-// * Escrito por Matheus Cassioli (30/07/2019).
-// * Atualizado por Giovanni de Castro (22/01/2020).
-// *
-// * This program is free software: you can redistribute it and/or modify
-// * it under the terms of the GNU General Public License as published by
-// * the Free Software Foundation, either version 3 of the License, or
-// * (at your option) any later version (<https://www.gnu.org/licenses/>).
-// ******************************************************************************/
-
 // #include <Keypad.h> // Biblioteca do código
 
 // const byte LINHAS = 4; // Linhas do teclado
