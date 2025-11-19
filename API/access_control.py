@@ -137,8 +137,8 @@ def process_access_attempt(data, mqtt_client=None):
         send_command_mqtt(mqtt_client, "ESP32_LEDS", "led_green", {"duration": 3000})
         
         # ESP2: Desbloqueia porta
-        send_command_http("ESP32_DOOR", "unlock_door")
-        send_command_mqtt(mqtt_client, "ESP32_DOOR", "unlock_door")
+        send_command_http("ESP32_DOOR", {"destravar": True})
+        # send_command_mqtt(mqtt_client, "ESP32_DOOR", "unlock_door")
         
         with system_state["lock"]:
             system_state["porta_desbloqueada"] = True
@@ -171,6 +171,15 @@ def process_door_sensor(data, mqtt_client=None):
         "data": {
             "door_open": 1,
             "unlocked": 1
+        }
+    }
+    Formato esperado novo:
+    {
+        "device_id": "ESP32_DOOR",
+        "sensor": "encoder",
+        "data": {
+            "alerta": True,
+            "portal_aberta": True
         }
     }
     """
@@ -277,7 +286,7 @@ def process_sensor_data(device_id, sensor, data, mqtt_client=None):
         if sensor == "access_attempt":
             process_access_attempt(data, mqtt_client)
             
-        elif sensor == "door_sensor":
+        elif sensor == "encoder":
             process_door_sensor(data, mqtt_client)
             
         elif sensor == "alert":

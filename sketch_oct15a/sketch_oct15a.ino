@@ -1,94 +1,69 @@
 #include "comunicacao.h"
+#include <Arduino_JSON.h>
 
-// ============================================================================
-// Callback para processar comandos recebidos do servidor
-// ============================================================================
+#define encoder 13
+#define rele 12
+
+/*
+ *  recebe: 
+ *       destravar = boolean; true se a senha foi correta
+ *  envia:
+ *      ["alerta"] = boolean; true se deu timeout (porta aberta por > 5 segundos)
+ *      ["portal_aberta"] = boolean; true se a porta abriu (está interrompendo o sensor)
+*/
+
+bool dado = LOW;
+long tempo_ini = 0;
+const int intervalo = 5000;
+
 void processarComando(const String& command, const JSONVar& params) {
-  Serial.println("\n========================================");
-  Serial.println("COMANDO RECEBIDO DO SERVIDOR:");
-  Serial.println("Comando: " + command);
-  Serial.println("Parâmetros: " + JSON.stringify(params));
-  Serial.println("========================================");
-  
-  // Processa comando "retorno"
-  if (command == "retorno") {
-    if (params.hasOwnProperty("retorno")) {
-      bool retornoValue = (bool)params["retorno"];
+  if (command == "destravar") {
+    if (params.hasOwnProperty("destravar")) {
+      bool retornoValue = (bool)params["destravar"];
       
       if (retornoValue == true) {
-        Serial.println("✓✓✓ RETORNO = TRUE recebido do servidor! ✓✓✓");
-        Serial.println("Operação confirmada com sucesso!");
-        
-        // Exemplo: piscar LED 3 vezes
-        for (int i = 0; i < 3; i++) {
-          digitalWrite(2, HIGH);
-          delay(200);
-          digitalWrite(2, LOW);
-          delay(200);
-        }
-      } else {
-        Serial.println("✗✗✗ RETORNO = FALSE recebido do servidor! ✗✗✗");
-        Serial.println("Operação não foi bem-sucedida.");
+        digitalWrite(rele, HIGH);
       }
     }
   }
-  
-  // Processa outros comandos personalizados
-  else if (command == "status") {
-    Serial.println("Comando STATUS recebido");
-    if (params.hasOwnProperty("message")) {
-      String msg = (const char*)params["message"];
-      Serial.println("Mensagem: " + msg);
-    }
-  }
-  
-  else if (command == "config") {
-    Serial.println("Comando CONFIG recebido");
-    if (params.hasOwnProperty("interval")) {
-      int interval = (int)params["interval"];
-      Serial.println("Novo intervalo: " + String(interval) + " ms");
-    }
-  }
-  
   else {
-    Serial.println("⚠ Comando desconhecido: " + command);
+    Serial.println("Comando desconhecido: " + command);
   }
-  
-  Serial.println("========================================\n");
 }
 
 void setup() {
-  Serial.begin(9600);
-  pinMode(2, OUTPUT);  // LED interno
-  
-  // Inicializa comunicação com nome personalizado
-  comunicacaoInit("ESP32_LAB_001");
-  
-  // Registra o callback para processar comandos do servidor
-  comunicacaoSetCallback(processarComando);
-  
-  Serial.println("\n✓ Sistema iniciado!");
-  Serial.println("✓ Callback registrado para receber comandos do servidor");
-  Serial.println("Aguardando comandos via MQTT ou HTTP...\n");
+    pinMode(encoder, INPUT);
+    pinMode(rele, OUTPUT);
+    comunicacaoInit("ESP32_DOOR");
+    comunicacaoSetCallback(processarComando);
+    Serial.begin(9600);
 }
 
 void loop() {
-  comunicacaoTick();  // Mantém conexões ativas
-  
-  // Exemplo: Enviar dados de sensor periodicamente
-  static unsigned long lastSend = 0;
-  if (millis() - lastSend > 10000) {  // A cada 10 segundos
-    JSONVar dados;
-    dados["rpm"] = random(1000, 4000);
-    dados["temp"] = random(20, 45);
-    dados["voltage"] = 12.0;
-    dados["current"] = 2.5;
-    
-    Serial.println("📤 Enviando dados do sensor...");
-    enviarDadosSensor("motor", dados);
-    
-    lastSend = millis();
-  }
-  
-  delay(10);
+    comunicacaoTick();
+    long tempo_atual = millis();
+    bool novo_dado = !digitalRead(encoder);
+    if (tempo_atual - tempo_ini >= intervalo) {
+        if (dado == LOW) {
+            JSONVar dados;
+            dados["alerta"] = true;
+            dados["porta_aberta"] = true;
+            enviarDadosSensor("encoder", dados);
+        }
+        tempo_ini = tempo_atual;
+    }
+    if (novo_dado == HIGH && dado == LOW){
+        JSONVar dados;
+        dados["porta_aberta"] = false;
+        dados["alerta"] = false;
+        enviarDadosSensor("encoder", dados);
+        digitalWrite(rele, LOW);
+        dado = novo_dado;
+    } else if (novo_dado == LOW && dado == HIGH) {
+        JSONVar dados;
+        dados["porta_aberta"] = true;
+        dados["alerta"] = false;
+        enviarDadosSensor("encoder", dados);
+        dado = novo_dado;
+    }
 }
