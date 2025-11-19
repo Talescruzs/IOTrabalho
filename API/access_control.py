@@ -251,7 +251,7 @@ def process_climate(data, mqtt_client=None):
             send_command_http("ESP32_LEDS", "led_yellow", {"duration": 0})  # 0 = fica aceso
             send_command_mqtt(mqtt_client, "ESP32_LEDS", "led_yellow", {"duration": 0})
             
-        elif temp_alert == 0 and estava_alta:
+        elif temp_alert == 0 and not estava_alta:
             # Temperatura voltou ao normal
             print(f"[CLIMA] ✓ Temperatura normalizada: {temperature}°C", flush=True)
             
@@ -289,6 +289,22 @@ def process_sensor_data(device_id, sensor, data, mqtt_client=None):
         elif sensor == "led_status":
             # Status dos LEDs - apenas log
             print(f"[LEDS] Status: {data}", flush=True)
+            
+        elif sensor == "motor":
+            # Processa dados do sensor motor (ESP32_LAB_001)
+            temperature = data.get("temp", 0)
+            
+            print(f"[MOTOR] Temperatura: {temperature}°C", flush=True)
+            
+            # Verifica se temperatura > 25°C
+            if temperature > 25:
+                print(f"[MOTOR] ⚠️  Temperatura acima de 25°C! Enviando confirmação...", flush=True)
+                
+                # Envia {retorno: true} para ESP32_LAB_001
+                send_command_http("ESP32_LAB_002", "retorno", {"retorno": True})
+                send_command_mqtt(mqtt_client, "ESP32_LAB_002", "retorno", {"retorno": True})
+            else:
+                print(f"[MOTOR] ✓ Temperatura normal (< 25°C)", flush=True)
             
         else:
             print(f"[access_control] Sensor desconhecido: {sensor}", flush=True)
