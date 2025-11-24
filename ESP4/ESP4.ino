@@ -35,12 +35,12 @@ void processarComando(const String& command, const JSONVar& params) {
         }
     }
     else if (command == "alerta") {
-        int retornoValue = (int)params["alerta"];
+        char retornoValue = params["alerta"];
     
-        if (retornoValue) {
+        if (retornoValue == '1') {
             digitalWrite(VERMELHO, HIGH);
             digitalWrite(VERDE, HIGH);
-        } else if (!retornoValue) {
+        } else if (retornoValue == '0') {
             digitalWrite(VERMELHO, LOW);
             digitalWrite(VERDE, LOW);
         }
