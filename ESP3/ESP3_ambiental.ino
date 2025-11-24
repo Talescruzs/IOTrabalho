@@ -6,6 +6,13 @@
 #define DHTPIN 15
 #define DHTTYPE DHT11
 
+/*
+ *  envia:
+ *      ["temperatura"] = float; valor em °C lido do DHT11
+ *      ["umidade"] = float; valor em % lido do DHT11
+ *
+ */
+
 DHT dht(DHTPIN, DHTTYPE);
 
 void setup() {
