@@ -133,8 +133,8 @@ def process_access_attempt(data, mqtt_client=None):
         send_command_mqtt(mqtt_client, "ESP32_KEYPAD", "vibrate_short")
         
         # ESP4: LED verde (3s)
-        send_command_http("ESP32_LEDS", "led_green", {"duration": 3000})
-        send_command_mqtt(mqtt_client, "ESP32_LEDS", "led_green", {"duration": 3000})
+        send_command_http("ESP32_LEDS", "pisca", {"pisca": 2})
+        # send_command_mqtt(mqtt_client, "ESP32_LEDS", "led_green", {"duration": 3000})
         
         # ESP2: Desbloqueia porta
         send_command_http("ESP32_DOOR", {"destravar": True})
@@ -153,8 +153,8 @@ def process_access_attempt(data, mqtt_client=None):
         send_command_mqtt(mqtt_client, "ESP32_KEYPAD", "vibrate_long")
         
         # ESP4: LED vermelho (3s)
-        send_command_http("ESP32_LEDS", "led_red", {"duration": 3000})
-        send_command_mqtt(mqtt_client, "ESP32_LEDS", "led_red", {"duration": 3000})
+        send_command_http("ESP32_LEDS", "pisca", {"pisca": 1})
+        # send_command_mqtt(mqtt_client, "ESP32_LEDS", "led_red", {"duration": 3000})
         
         print("[ACESSO] ✓ Comandos de acesso negado enviados", flush=True)
     
@@ -192,16 +192,16 @@ def process_encoder(data, mqtt_client=None):
             print(f"[PORTA] 🚪 Porta FECHADA", flush=True)
             
             # ESP4: Apaga LEDs
-            send_command_http("ESP32_LEDS", "led_off")
-            send_command_mqtt(mqtt_client, "ESP32_LEDS", "led_off")
+            send_command_http("ESP32_LEDS", "alerta", {"alerta": False})
+            # send_command_mqtt(mqtt_client, "ESP32_LEDS", "led_off")
         
         # Processa alerta de timeout
         if alerta:
             print(f"[PORTA] ⚠️  ALERTA: Porta aberta por muito tempo!", flush=True)
             
             # ESP4: Acende LEDs verde + vermelho (alerta)
-            send_command_http("ESP32_LEDS", "led_alert")
-            send_command_mqtt(mqtt_client, "ESP32_LEDS", "led_alert")
+            send_command_http("ESP32_LEDS", "alerta", {"alerta": True})
+            # send_command_mqtt(mqtt_client, "ESP32_LEDS", "led_alert")
 
 def process_door_alert(data, mqtt_client=None):
     """
@@ -224,8 +224,8 @@ def process_door_alert(data, mqtt_client=None):
         print(f"[PORTA] ⚠️  ALERTA: Porta aberta há {duration} segundos!", flush=True)
         
         # ESP4: Acende LEDs verde + vermelho (alerta)
-        send_command_http("ESP32_LEDS", "led_alert")
-        send_command_mqtt(mqtt_client, "ESP32_LEDS", "led_alert")
+        send_command_http("ESP32_LEDS", "alerta", {"alerta": True})
+        # send_command_mqtt(mqtt_client, "ESP32_LEDS", "led_alert")
 
 def process_climate(data, mqtt_client=None):
     """
@@ -255,16 +255,16 @@ def process_climate(data, mqtt_client=None):
             print(f"[CLIMA] ⚠️  ALERTA: Temperatura alta: {temperature}°C", flush=True)
             
             # ESP4: Acende LED amarelo
-            send_command_http("ESP32_LEDS", "led_yellow", {"duration": 0})  # 0 = fica aceso
-            send_command_mqtt(mqtt_client, "ESP32_LEDS", "led_yellow", {"duration": 0})
+            send_command_http("ESP32_LEDS", "pisca", {"pisca": 3})  # 0 = fica aceso
+            # send_command_mqtt(mqtt_client, "ESP32_LEDS", "led_yellow", {"duration": 0})
             
         elif temp_alert == 0 and not estava_alta:
             # Temperatura voltou ao normal
             print(f"[CLIMA] ✓ Temperatura normalizada: {temperature}°C", flush=True)
             
             # ESP4: Apaga LED amarelo
-            send_command_http("ESP32_LEDS", "led_off")
-            send_command_mqtt(mqtt_client, "ESP32_LEDS", "led_off")
+            send_command_http("ESP32_LEDS", "alerta", {"alerta": False})
+            # send_command_mqtt(mqtt_client, "ESP32_LEDS", "led_off")
 
 # ============================================================================
 # PROCESSADOR PRINCIPAL
