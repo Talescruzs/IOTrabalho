@@ -64,6 +64,7 @@ void loop() {
         dados["porta_aberta"] = true;
         dados["alerta"] = false;
         enviarDadosSensor("encoder", dados);
+        digitalWrite(rele, HIGH);
         dado = novo_dado;
     }
 }
