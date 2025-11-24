@@ -35,7 +35,7 @@ void processarComando(const String& command, const JSONVar& params) {
         }
     }
     else if (command == "alerta") {
-        int retornoValue = (bool)params["alerta"];
+        int retornoValue = (int)params["alerta"];
     
         if (retornoValue) {
             digitalWrite(VERMELHO, HIGH);
