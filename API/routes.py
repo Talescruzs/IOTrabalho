@@ -1,7 +1,7 @@
 from flask import Blueprint
 from API.controllers import (
     get_data, control_command, esp_status, ingest_status, 
-    esp_latest, get_chart_data, get_sensor_history, get_detailed_readings
+    esp_latest, get_chart_data, get_sensor_history, get_detailed_readings, get_esp_data
 )
 from Front.home import home, dashboard
 
@@ -17,3 +17,4 @@ api_bp.route('/esp/latest', methods=['GET'])(esp_latest)
 api_bp.route('/api/chart-data', methods=['GET'])(get_chart_data)
 api_bp.route('/api/sensor-history', methods=['GET'])(get_sensor_history)
 api_bp.route('/api/detailed-readings', methods=['GET'])(get_detailed_readings)
+api_bp.route('/api/esp-data', methods=['GET'])(get_esp_data)
