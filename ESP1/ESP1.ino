@@ -7,7 +7,6 @@
 
 /*
  *  recebe:
- *          ["resultado"] = objeto contendo:
  *          ["autorizado"] = boolean; true se a senha estiver correta
  *
  *  envia:
